@@ -11,6 +11,7 @@ GitHub Issues 传消息，任务文件保存约定，Pull Requests 交付成果�
 | 能力 | 当前实现 |
 | --- | --- |
 | 跨用户、跨 Agent 留言与回复 | 使用同一个项目的 Issues 和评论 |
+| 醒来后补看历史和分配任务 | `check --full` 全部分页扫描，导出相关话题全文和当前指派的未关闭任务 |
 | 无需人手动查询的收信提醒 | 可选 Codex Hook，在工作事件发生时检查；其他 Agent 默认主动调用 `check` |
 | Agent 自主决定是否回复 | 本人提前授权范围后，Agent 可按 Skill 用 `gh` 或连接器回复；查收脚本本身不调用模型或发信 |
 | Agent 空闲时持续收信并被唤醒 | 尚未实现 |
@@ -24,7 +25,7 @@ GitHub Issues 传消息，任务文件保存约定，Pull Requests 交付成果�
 
 复制下面这段话给队友的 Agent，填上团队仓库和本机路径：
 
-> 请从 https://github.com/NikolaStarx/team-mailbox 拉取 team-mailbox Skill，先阅读 README.md 和 skills/team-mailbox/SKILL.md，再将 Skill 安装到我们的项目【本机路径】。团队仓库是【OWNER/REPO】，请核对项目 origin 指向它，用我自己的 GitHub 账号初始化并查收。按当前 Agent 的技能目录安装，默认不用 Hook。以后开工和交接前查收消息；可以在我已授权的任务内回复技术问题与进度，新增任务或范围变化先问我。请保留项目已有规则和未提交修改。
+> 请从 https://github.com/NikolaStarx/team-mailbox 拉取 team-mailbox Skill，先阅读 README.md 和 skills/team-mailbox/SKILL.md，再将 Skill 安装到我们的项目【本机路径】。团队仓库是【OWNER/REPO】，请核对项目 origin 指向它，用我自己的 GitHub 账号初始化并执行 check --full，读完索引中的全部相关话题，整理分配给我的任务和未处理消息。按当前 Agent 的技能目录安装，默认不用 Hook。以后恢复工作时完整查收，工作中按需快速查收；可以在我已授权的任务内回复技术问题与进度，新增任务或范围变化先问我。请保留项目已有规则和未提交修改。
 
 ## 快速安装
 
@@ -44,7 +45,7 @@ python3 scripts/install.py --project /path/to/your-team-project
 gh auth login --hostname github.com
 gh api user --jq .login
 python3 .agents/skills/team-mailbox/scripts/mailbox.py init
-python3 .agents/skills/team-mailbox/scripts/mailbox.py check
+python3 .agents/skills/team-mailbox/scripts/mailbox.py check --full
 ```
 
 Claude Code 将 `.agents` 换成 `.claude`；Windows 可将 `python3` 换成 `py -3`。首次安装后按客户端方式重新发现 Skill，或直接让 Agent 读取它。完整设置、可选 Codex Hook、暂停与卸载见[安装说明](skills/team-mailbox/references/setup.md)。
@@ -53,7 +54,7 @@ Claude Code 将 `.agents` 换成 `.claude`；Windows 可将 `python3` 换成 `py
 
 1. 在团队项目维护成员 GitHub 账号与职责。
 2. 一项任务或话题一个 Issue，在正文/评论中 `@收件人`；复杂任务链接已推送的任务文件。
-3. 收件人的 Agent 运行 `check`，再读 Issue 和评论原文；在本人已授权的范围内处理。
+3. 收件人的 Agent 运行 `check --full`，读完索引中的 Issue 正文与全部评论；在本人已授权的范围内处理。工作中可用 `check` 快速查最近变化。
 4. 回复结果、复现命令与证据链接，代码和文档修改通过 PR 交付。
 
 发送使用原生 GitHub CLI，消息正文先保存为 Markdown 文件：
@@ -79,7 +80,9 @@ gh issue comment NUMBER --repo OWNER/REPO --body-file reply.md
 
 ## 范围与验证
 
-Python 脚本只读取 GitHub，不发送消息；它扫描本人被 @、被指派、创建或参与的 Issues，排除 PR 和自己的发言。Hook 有 60 秒冷却和尽力去重，没有后台服务、空闲唤醒或送达保证。手动 `check` 保留最近入口，不是严格已读/未读系统。
+Python 脚本只读取 GitHub，不发送消息。`check --full` 遍历所有分页，导出本人被 @、被指派、创建、参与或本机曾关注的 Issues，包含已关闭话题和完整评论；单独列出当前指派给本人的未关闭任务。导出文件保存在 Git common dir 中，Agent 应逐个读完，避免终端长输出被截断。任何分页失败都会报错，导出成功不等于已读。
+
+完整范围限于当前项目、当前账号可访问且仍保留的 Issues/评论，不含 PR 审查、已删除文本或被改写的旧版本。扫描不是冻结快照，期间有变化可再次查询。普通 `check` 和 Hook 为最近活动提醒，会排除自己的发言；`check` 只展示最多 20 条入口。Hook 有 60 秒冷却和尽力去重，没有后台服务、空闲唤醒或送达保证，也不是严格已读/未读系统。
 
 支持 github.com 的 HTTPS/SSH origin；面向小仓库，首次会扫描历史 Issues 和评论。本机状态位于 Git common dir 中，不提交。原项目的成员、私有通讯录、凭据和聊天记录不包含在此发布中。
 

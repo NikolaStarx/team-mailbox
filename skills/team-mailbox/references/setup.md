@@ -24,7 +24,7 @@ python3 scripts/install.py --project /path/to/team-project
 gh auth login --hostname github.com
 gh api user --jq .login
 python3 .agents/skills/team-mailbox/scripts/mailbox.py init
-python3 .agents/skills/team-mailbox/scripts/mailbox.py check
+python3 .agents/skills/team-mailbox/scripts/mailbox.py check --full
 ```
 
 Claude Code 将命令中的 `.agents` 换为 `.claude`。Windows 可将 `python3` 换成 `py -3`。脚本放在别处时，使用 `python3 /path/to/mailbox.py --project /path/to/team-project check`。`--project` 必须放在子命令之前。
@@ -32,6 +32,14 @@ Claude Code 将命令中的 `.agents` 换为 `.claude`。Windows 可将 `python3
 工具根据项目 `origin` 判断收件仓库，支持 `https://github.com/OWNER/REPO.git` 和 `git@github.com:OWNER/REPO.git`。**每人应克隆同一个团队仓库，不要各自用个人 fork 作为邮箱 origin。** 发信示例中的 `--repo` 也必须指向同一个仓库。本版本只支持 github.com。
 
 默认 `init` 不安装 Hook；兼容 `init --manual`。没有新消息时 `check` 也可能列出历史入口，`new_count` 表示本次变化数，不是严格未读数。首次会扫描仓库 Issues 和评论，大型仓库可能较慢；它面向小团队。
+
+## 醒来后补看历史和任务
+
+`check --full` 不使用增量时间游标，会遍历 GitHub 的全部分页，包括已关闭 Issues；按 @、指派、创建、参与和本机曾关注关系找到话题，保留这些话题的完整正文和所有评论。自己写的内容也保留为上下文。没有最近 20 条/100 条的结果上限。
+
+输出提供 `index_file`，索引内的 `assigned_open_issues` 列出当前指派给本人的未关闭 Issues，`threads` 指向每个话题的完整 JSON 文件。Agent 必须逐个读完；导出成功不等于已阅读。历史导出位于 Git common dir 中的 `team-mailbox/history/`，不要提交或作为公开附件上传。每次生成独立报告，不覆盖旧报告，也不消耗 Hook 通知或标成已读。
+
+分页失败、无权限或评论数量少于 Issue 报告值时命令会报错，不输出成功报告。范围是当前项目中该账号可访问、GitHub 仍保留的 Issues 和评论；不含 PR 审查、其他仓库、已删除文本、被改掉的旧版本或已不可见的过去指派记录。API 扫描不是原子快照，期间若有人编辑/删除消息可能需要重试；新消息在后续查询补收。
 
 ## 可选：Codex 工作间隙自动查收
 
@@ -49,7 +57,8 @@ python3 .agents/skills/team-mailbox/scripts/mailbox.py init --codex-hooks
 
 | 命令 | 行为 |
 | --- | --- |
-| `check` | 查收本人被 @、被指派、创建或参与的 Issue 活动，排除自己的发言和 PR |
+| `check` | 最近活动摘要，最多 20 条入口，排除自己的发言和 PR |
+| `check --full` | 全部分页扫描，导出相关 Issue 正文/全部评论和目前指派给本人的未关闭任务 |
 | `doctor` | 显示初始化身份、开关、最近成功/错误与 Hook 登记；不是在线连通性测试 |
 | `pause` / `resume` | 暂停/恢复 Hook 查收，手动查询可用 |
 | `uninstall-hooks` | 移除当前 checkout 中本工具登记的 Hook，保留其他配置 |
