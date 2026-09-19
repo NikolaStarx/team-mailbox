@@ -1,10 +1,24 @@
 # Team Mailbox
 
-**让不同队员的 AI Agent，通过 GitHub 协作。**
+**面向多人 Agent 编程的通用 GitHub 通信协议与 Skill。**
 
-一个从 GROW.md 团队协作中提取的开源 Skill：GitHub Issues 传消息，任务文件保存约定，Pull Requests 交付成果。适合数学建模、科研与开发小队。成员可以使用不同 Agent、不同电脑和各自的 GitHub 账号，无需共享账号、模型 API Key 或搭建服务器。
+GitHub Issues 传消息，任务文件保存约定，Pull Requests 交付成果。成员可以使用不同的编程 Agent、不同电脑和各自的 GitHub 账号。协议约定如何寻址、回复和交接，Skill 指导 Agent 执行这些约定，Python 脚本辅助查收；当前版本无需共享账号、模型 API Key 或搭建服务器。
 
-它是一套轻量协作约定和查收工具，不是实时聊天、远程控制或通用 Agent RPC 标准。**工具仓库公开；你们的项目、数据和通信可以放在自己的私有 GitHub 仓库。** 不要把团队工作消息发到本工具仓库的 Issues。
+**工具仓库公开；你们的项目和通信可以放在自己的私有 GitHub 仓库。** 工作消息发到你们的团队项目。通信约定和当前能力见[协议说明](skills/team-mailbox/references/protocol.md)。
+
+## 自动接收与自主回复
+
+| 能力 | 当前实现 |
+| --- | --- |
+| 跨用户、跨 Agent 留言与回复 | 使用同一个项目的 Issues 和评论 |
+| 无需人手动查询的收信提醒 | 可选 Codex Hook，在工作事件发生时检查；其他 Agent 默认主动调用 `check` |
+| Agent 自主决定是否回复 | 本人提前授权范围后，Agent 可按 Skill 用 `gh` 或连接器回复；查收脚本本身不调用模型或发信 |
+| Agent 空闲时持续收信并被唤醒 | 尚未实现 |
+| 像聊天一样连续自动往返 | 尚未实现，需要独立收信进程与各 Agent 的会话接入 |
+
+**60 秒是 Hook 两次检查之间的最短间隔，不是每分钟定时收信，也不是送达时限。** 当前只在会话开始、用户输入和工具调用完成时触发；没有这些事件就不会检查。Codex 的异步 Hook 本身也不会启动空闲会话的新回合，见[官方说明](https://learn.chatgpt.com/docs/hooks)。
+
+收信与回信授权相互独立：可以只收不回，也可以允许 Agent 在已有任务内自主回复。这里只约定 Agent 的行为，当前没有一个能替所有客户端开启自动聊天的开关。
 
 ## 直接交给你的 Agent
 
@@ -37,15 +51,15 @@ Claude Code 将 `.agents` 换成 `.claude`；Windows 可将 `python3` 换成 `py
 
 ## 团队如何使用
 
-1. 在团队项目维护成员 GitHub 账号与分工；可从[建模示例](examples/math-modeling/README.md)开始。
-2. 一项任务一个 Issue，在正文/评论中 `@收件人`；复杂任务链接已推送的任务文件。
+1. 在团队项目维护成员 GitHub 账号与职责。
+2. 一项任务或话题一个 Issue，在正文/评论中 `@收件人`；复杂任务链接已推送的任务文件。
 3. 收件人的 Agent 运行 `check`，再读 Issue 和评论原文；在本人已授权的范围内处理。
-4. 回复结果、复现命令与证据链接，代码/模型/论文修改通过 PR 交付。
+4. 回复结果、复现命令与证据链接，代码和文档修改通过 PR 交付。
 
 发送使用原生 GitHub CLI，消息正文先保存为 Markdown 文件：
 
 ```sh
-gh issue create --repo OWNER/REPO --title 'Q2：比较两个模型的验证误差' --body-file draft.md
+gh issue create --repo OWNER/REPO --title '确认接口变更与调用方适配' --body-file draft.md
 gh issue view NUMBER --repo OWNER/REPO --comments
 gh issue comment NUMBER --repo OWNER/REPO --body-file reply.md
 ```
@@ -78,7 +92,7 @@ python3 -m unittest discover -s tests -v
 
 ## English summary
 
-Team Mailbox is an agent-neutral collaboration skill: GitHub Issues carry messages, project files record agreements, and pull requests deliver work. Each teammate uses their own GitHub identity and preferred agent. Install with `python3 scripts/install.py --project PATH` (`--agent claude` for Claude Code), then follow the skill's setup guide in your team repository. The inbox is read-only; sending uses the GitHub CLI or your agent's GitHub connector under your authorization. Codex hooks are optional. Your team repository can stay private.
+Team Mailbox is a general communication protocol and skill for teams coding with different AI agents. GitHub Issues carry messages, project files record agreements, and pull requests deliver work. Each teammate uses their own GitHub identity and preferred agent. Install with `python3 scripts/install.py --project PATH` (`--agent claude` for Claude Code). The inbox script is read-only; an agent can choose to reply through the GitHub CLI or a connector within its user's authorization. Optional Codex hooks check during active work. Continuous background reception, waking idle agents, and automatic chat sessions are not implemented. Your team repository can stay private.
 
 ## License and origin
 
