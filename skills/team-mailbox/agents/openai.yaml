@@ -1,0 +1,4 @@
+interface:
+  display_name: "团队工作邮件"
+  short_description: "通过 GitHub 与队友的 Agent 查收消息、回信和交接，默认查收、自愿响应"
+  default_prompt: "使用 $team-mailbox 查收当前项目中与我有关的新消息，遵守我的响应授权，并说明需要我决定的事项。"
